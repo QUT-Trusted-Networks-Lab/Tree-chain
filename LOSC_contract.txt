@@ -1,0 +1,121 @@
+pragma solidity >=0.4.22 <0.8.0;
+pragma experimental ABIEncoderV2;
+
+
+
+contract losc{
+
+struct tia{
+bytes32 tid;
+bytes32 timestamp;
+bytes32 loscaddr;
+bytes32 pk;
+bytes32 sign;}
+
+struct ccr{
+uint st;
+uint en;}
+
+tia[] public validator_transactions;
+bytes32[] pks;
+uint[] kwms;
+mapping(uint => bytes32) kwmdict;
+uint numberofvalidators;
+uint const1 = 50;
+uint[] ccrlengths;
+ccr[] ccrs;
+mapping(bytes32 => ccr) ccrsdict;
+
+constructor() public {
+numberofvalidators = 0;}
+
+
+function storeCalculteKWM(tia memory 
+transaction, uint c) public {
+validator_transactions.push(tia({
+tid: transaction.tid,
+timestamp: transaction.timestamp,
+loscaddr: transaction.loscaddr,
+pk: transaction.pk,
+sign: transaction.sign}));
+
+uint kwm = 0;
+for(uint i = 0; i < transaction.pk.length;
+ i++){
+uint8 x = uint8(transaction.pk[i]);
+uint weight1 = const1 + x;
+uint weight2 = c - i;
+kwm = kwm + weight1 * weight2;}
+
+kwms.push(kwm);
+pks.push(transaction.pk);
+kwmdict[kwm] = transaction.pk;
+numberofvalidators = numberofvalidators + 
+1;}
+
+
+function assignCCR() public {
+uint count = 0;
+uint num = 1;
+uint temp = numberofvalidators;
+
+while(temp > 0)
+{count = count + 1;
+temp = temp / 62;
+num = num * 62;}
+
+
+insertionSort();
+
+for(uint i = 0; i < numberofvalidators; i++)
+{pks[i] = kwmdict[kwms[i]];}
+
+uint minlen = num / numberofvalidators;
+uint left = num - minlen * numberofvalidators;
+for(uint i = 0; i < numberofvalidators; i++)
+{
+if(left != 0)
+{
+ccrlengths.push(minlen + 1);
+left = left - 1;
+}
+else
+{
+ccrlengths.push(minlen);
+}
+}
+uint start = 0;
+uint end = ccrlengths[0] - 1;
+
+for(uint i = 0; i < numberofvalidators; i++)
+{
+ccrs.push(ccr({st: start,en: end}));
+start = end + 1;
+if(i != numberofvalidators-1)
+{
+end = end + ccrlengths[i+1];
+}
+ccrsdict[pks[i]] = ccrs[i];
+}
+
+function readCCR(bytes32 s) public 
+view returns(uint, uint){
+return (ccrsdict[s].st, ccrsdict[s].en);}
+
+
+function getTotalValidators() public 
+view returns(uint){
+return numberofvalidators;}
+
+function insertionSort() public {
+for (uint i = 1;i < kwms.length;i++)
+{
+uint temp = kwms[i];
+uint j;
+for (j = i -1; j >= 0 && temp > kwms[j]; j--)
+kwms[j+1] = kwms[j];
+kwms[j + 1] = temp;
+}
+}
+
+}
